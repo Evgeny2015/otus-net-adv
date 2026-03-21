@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/Services/">
+    <Project Path="Services/CommandParser/CommandParser.csproj" />
+    <Project Path="Services/SimpleStore/SimpleStore.csproj" />
+    <Project Path="Services/TestServices/TestServices.csproj" />
+  </Folder>
+</Solution>
