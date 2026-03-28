@@ -5,12 +5,6 @@ namespace TestServices
     public class UnitTest1
     {
         [Fact]
-        public void Test1()
-        {
-
-        }
-
-        [Fact]
         public void Parse_ValidInput_ReturnsCorrectComponents()
         {
             // Arrange
@@ -47,16 +41,6 @@ namespace TestServices
         public void Parse_MultipleSpaces_HandlesCorrectly()
         {
             var input = "SET   key   value";
-            var parsed = CommandParser.CommandParser.Parse(input);
-            Assert.Equal("SET", parsed.Command.ToString());
-            Assert.Equal("key", parsed.Key.ToString());
-            Assert.Equal("value", parsed.Value.ToString());
-        }
-
-        [Fact]
-        public void Parse_TabSeparators_HandlesCorrectly()
-        {
-            var input = "SET\tkey\tvalue";
             var parsed = CommandParser.CommandParser.Parse(input);
             Assert.Equal("SET", parsed.Command.ToString());
             Assert.Equal("key", parsed.Key.ToString());

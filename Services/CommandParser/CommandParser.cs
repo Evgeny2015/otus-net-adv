@@ -25,7 +25,7 @@
             }
 
             // Find first whitespace
-            int firstWhitespace = input.IndexOfAny(WhitespaceChars);
+            int firstWhitespace = input.IndexOf(WhitespaceChars);
             if (firstWhitespace == -1)
             {
                 // Only command
@@ -43,7 +43,7 @@
             }
 
             // Find second whitespace
-            int secondWhitespace = afterCommand.IndexOfAny(WhitespaceChars);
+            int secondWhitespace = afterCommand.IndexOf(WhitespaceChars);
             if (secondWhitespace == -1)
             {
                 // Only key, no value
@@ -59,6 +59,6 @@
             return new ParsedCommand(command, key, value);
         }
 
-        private static readonly char[] WhitespaceChars = [' ', '\t'];
+        private static readonly char WhitespaceChars = ' ';
     }
 }
