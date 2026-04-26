@@ -111,11 +111,14 @@ namespace TcpServer
                 {
                     clientSocket.Shutdown(SocketShutdown.Both);
                     clientSocket.Close();
-                    clientSocket.Dispose();
                 }
                 catch
                 {
                     // Ignore errors during cleanup
+                }
+                finally
+                {
+                    clientSocket.Dispose();
                 }
             }
         }
