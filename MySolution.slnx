@@ -3,5 +3,7 @@
     <Project Path="Services/CommandParser/CommandParser.csproj" />
     <Project Path="Services/SimpleStore/SimpleStore.csproj" />
     <Project Path="Services/TestServices/TestServices.csproj" />
+    <Project Path="Services/TcpServer/TcpServer.csproj" />
   </Folder>
+  <Project Path="ServerApp/ServerApp.csproj" />
 </Solution>
