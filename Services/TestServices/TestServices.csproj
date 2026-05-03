@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CommandParser\CommandParser.csproj" />
+    <ProjectReference Include="..\SimpleStore\SimpleStore.csproj" />
   </ItemGroup>
 
 </Project>
