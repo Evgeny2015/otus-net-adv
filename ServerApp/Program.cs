@@ -7,8 +7,11 @@ class Program
     {
         try
         {
-            // Create TCP server instance
-            var server = new TcpServer.TcpServer("127.0.0.1", 8080);
+            // Create SimpleStore instance
+            var store = new SimpleStore.SimpleStore();
+
+            // Create TCP server instance with store
+            var server = new TcpServer.TcpServer("127.0.0.1", 8080, store);
 
             Console.WriteLine("Starting TCP server...");
             Console.WriteLine("Press Ctrl+C to stop the server.");
