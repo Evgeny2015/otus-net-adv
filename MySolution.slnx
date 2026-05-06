@@ -6,4 +6,5 @@
     <Project Path="Services/TcpServer/TcpServer.csproj" />
   </Folder>
   <Project Path="ServerApp/ServerApp.csproj" />
+  <Project Path="LoadTest/LoadTest.csproj" />
 </Solution>
