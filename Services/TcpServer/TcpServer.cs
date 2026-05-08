@@ -2,7 +2,9 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
+using SimpleStore;
 
 namespace TcpServer
 {
@@ -97,9 +99,6 @@ namespace TcpServer
                         string key = parsedCommand.Key.ToString();
                         string valueStr = parsedCommand.Value.ToString();
 
-                        // Convert value from string to byte[] if needed
-                        byte[]? valueBytes = string.IsNullOrEmpty(valueStr) ? null : Encoding.UTF8.GetBytes(valueStr);
-
                         // Process command based on type
                         if (string.IsNullOrEmpty(command))
                         {
@@ -112,16 +111,33 @@ namespace TcpServer
                             switch (command.ToUpperInvariant())
                             {
                                 case "SET":
-                                    if (string.IsNullOrEmpty(key) || valueBytes == null)
+                                    if (string.IsNullOrEmpty(key) || string.IsNullOrEmpty(valueStr))
                                     {
                                         var errorResponse = Encoding.UTF8.GetBytes("-ERR SET requires key and value\r\n");
                                         await clientSocket.SendAsync(new Memory<byte>(errorResponse), SocketFlags.None);
                                     }
                                     else
                                     {
-                                        _store.Set(key, valueBytes);
-                                        var okResponse = Encoding.UTF8.GetBytes("OK\r\n");
-                                        await clientSocket.SendAsync(new Memory<byte>(okResponse), SocketFlags.None);
+                                        try
+                                        {
+                                            var profile = JsonSerializer.Deserialize<UserProfile>(valueStr);
+                                            if (profile == null)
+                                            {
+                                                var errorResponse = Encoding.UTF8.GetBytes("-ERR Invalid JSON format\r\n");
+                                                await clientSocket.SendAsync(new Memory<byte>(errorResponse), SocketFlags.None);
+                                            }
+                                            else
+                                            {
+                                                _store.Set(key, profile);
+                                                var okResponse = Encoding.UTF8.GetBytes("OK\r\n");
+                                                await clientSocket.SendAsync(new Memory<byte>(okResponse), SocketFlags.None);
+                                            }
+                                        }
+                                        catch (JsonException)
+                                        {
+                                            var errorResponse = Encoding.UTF8.GetBytes("-ERR Invalid JSON format\r\n");
+                                            await clientSocket.SendAsync(new Memory<byte>(errorResponse), SocketFlags.None);
+                                        }
                                     }
                                     break;
 
@@ -133,15 +149,17 @@ namespace TcpServer
                                     }
                                     else
                                     {
-                                        var value = _store.Get(key);
-                                        if (value == null)
+                                        var profile = _store.Get(key);
+                                        if (profile == null)
                                         {
                                             var nilResponse = Encoding.UTF8.GetBytes("(nil)\r\n");
                                             await clientSocket.SendAsync(new Memory<byte>(nilResponse), SocketFlags.None);
                                         }
                                         else
                                         {
-                                            await clientSocket.SendAsync(new Memory<byte>(value), SocketFlags.None);
+                                            var json = JsonSerializer.Serialize(profile);
+                                            var jsonBytes = Encoding.UTF8.GetBytes(json);
+                                            await clientSocket.SendAsync(new Memory<byte>(jsonBytes), SocketFlags.None);
                                         }
                                     }
                                     break;

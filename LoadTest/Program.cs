@@ -5,6 +5,7 @@ using NBomber.Contracts;
 using NBomber.Configuration;
 using NBomber.CSharp;
 using NBomber.Plugins.Network.Ping;
+using SimpleStore;
 
 namespace LoadTest
 {
@@ -22,12 +23,17 @@ namespace LoadTest
                     using var client = new TcpClient("127.0.0.1", 8080);
                     await client.ConnectAsync();
 
-                    // Generate random key and value
+                    // Generate random key and UserProfile
                     string key = $"key_{Guid.NewGuid().ToString()[..8]}";
-                    byte[] value = Encoding.UTF8.GetBytes($"value_{Guid.NewGuid()}");
+                    var profile = new UserProfile
+                    {
+                        Id = Guid.NewGuid().GetHashCode(),
+                        Username = $"user_{Guid.NewGuid().ToString()[..8]}",
+                        CreatedAt = DateTime.UtcNow
+                    };
 
                     // Execute SET operation
-                    string response = await client.SetAsync(key, value);
+                    string response = await client.SetAsync(key, profile);
 
                     // Check if operation was successful
                     if (response.StartsWith("OK"))

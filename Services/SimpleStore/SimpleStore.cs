@@ -10,11 +10,12 @@
         private long _getCount = 0;
         private long _deleteCount = 0;
 
-        public void Set(string key, byte[] value)
+        public void Set(string key, UserProfile profile)
         {
             _lock.EnterWriteLock();
             try
             {
+                byte[] value = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(profile);
                 _storage[key] = value;
                 Interlocked.Increment(ref _setCount);
             }
@@ -24,14 +25,18 @@
             }
         }
 
-        public byte[]? Get(string key)
+        public UserProfile? Get(string key)
         {
             _lock.EnterReadLock();
             try
             {
                 _storage.TryGetValue(key, out byte[]? value);
                 Interlocked.Increment(ref _getCount);
-                return value;
+                if (value == null)
+                {
+                    return null;
+                }
+                return System.Text.Json.JsonSerializer.Deserialize<UserProfile>(value);
             }
             finally
             {
