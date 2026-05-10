@@ -15,8 +15,11 @@
             _lock.EnterWriteLock();
             try
             {
-                byte[] value = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(profile);
-                _storage[key] = value;
+                using (var memoryStream = new System.IO.MemoryStream())
+                {
+                    profile.SerializeToBinary(memoryStream);
+                    _storage[key] = memoryStream.ToArray();
+                }
                 Interlocked.Increment(ref _setCount);
             }
             finally
