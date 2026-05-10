@@ -1,7 +1,9 @@
 using System;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
+using SimpleStore;
 
 namespace LoadTest
 {
@@ -27,13 +29,13 @@ namespace LoadTest
             await _socket.ConnectAsync(_host, _port);
         }
 
-        public async Task<string> SetAsync(string key, byte[] value)
+        public async Task<string> SetAsync(string key, UserProfile profile)
         {
             if (_socket == null || !_socket.Connected)
                 throw new InvalidOperationException("Client is not connected");
 
-            string valueStr = _encoding.GetString(value);
-            string command = $"SET {key} {valueStr}\r\n";
+            string json = JsonSerializer.Serialize(profile);
+            string command = $"SET {key} {json}\r\n";
             byte[] commandBytes = _encoding.GetBytes(command);
 
             await _socket.SendAsync(new Memory<byte>(commandBytes), SocketFlags.None);
@@ -45,7 +47,7 @@ namespace LoadTest
             return response;
         }
 
-        public async Task<byte[]?> GetAsync(string key)
+        public async Task<UserProfile?> GetAsync(string key)
         {
             if (_socket == null || !_socket.Connected)
                 throw new InvalidOperationException("Client is not connected");
@@ -64,10 +66,16 @@ namespace LoadTest
             if (response.StartsWith("(nil)"))
                 return null;
 
-            // Return the raw bytes (the server sends the value bytes directly for GET)
-            var result = new byte[received];
-            Array.Copy(buffer, result, received);
-            return result;
+            // Deserialize JSON response
+            try
+            {
+                var profile = JsonSerializer.Deserialize<UserProfile>(response);
+                return profile;
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
         }
 
         public void Disconnect()

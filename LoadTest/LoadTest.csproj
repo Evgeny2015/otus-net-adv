@@ -13,4 +13,8 @@
     <PackageReference Include="NBomber" Version="6.3.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Services\SimpleStore\SimpleStore.csproj" />
+  </ItemGroup>
+
 </Project>
