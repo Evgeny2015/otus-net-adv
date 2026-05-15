@@ -170,45 +170,48 @@ namespace BinarySerializerGenerator
                 var propertyName = property.Name;
                 var typeName = property.Type.ToDisplayString();
 
-                if (typeName == "int" || typeName == "System.Int32")
+                switch (typeName)
                 {
-                    sb.AppendLine($"                writer.Write(this.{propertyName});");
-                }
-                else if (typeName == "string" || typeName == "System.String")
-                {
-                    sb.AppendLine($"                writer.Write(this.{propertyName} ?? string.Empty);");
-                }
-                else if (typeName == "DateTime" || typeName == "System.DateTime")
-                {
-                    sb.AppendLine($"                writer.Write(this.{propertyName}.Ticks);");
-                }
-                else if (typeName == "bool" || typeName == "System.Boolean")
-                {
-                    sb.AppendLine($"                writer.Write(this.{propertyName});");
-                }
-                else if (typeName == "long" || typeName == "System.Int64")
-                {
-                    sb.AppendLine($"                writer.Write(this.{propertyName});");
-                }
-                else if (typeName == "double" || typeName == "System.Double")
-                {
-                    sb.AppendLine($"                writer.Write(this.{propertyName});");
-                }
-                else if (typeName == "float" || typeName == "System.Single")
-                {
-                    sb.AppendLine($"                writer.Write(this.{propertyName});");
-                }
-                else if (typeName == "byte" || typeName == "System.Byte")
-                {
-                    sb.AppendLine($"                writer.Write(this.{propertyName});");
-                }
-                else if (typeName == "short" || typeName == "System.Int16")
-                {
-                    sb.AppendLine($"                writer.Write(this.{propertyName});");
-                }
-                else if (typeName == "decimal" || typeName == "System.Decimal")
-                {
-                    sb.AppendLine($"                writer.Write(this.{propertyName});");
+                    case "int":
+                    case "System.Int32":
+                        sb.AppendLine($"                writer.Write(this.{propertyName});");
+                        break;
+                    case "string":
+                    case "System.String":
+                        sb.AppendLine($"                writer.Write(this.{propertyName} ?? string.Empty);");
+                        break;
+                    case "DateTime":
+                    case "System.DateTime":
+                        sb.AppendLine($"                writer.Write(this.{propertyName}.Ticks);");
+                        break;
+                    case "bool":
+                    case "System.Boolean":
+                        sb.AppendLine($"                writer.Write(this.{propertyName});");
+                        break;
+                    case "long":
+                    case "System.Int64":
+                        sb.AppendLine($"                writer.Write(this.{propertyName});");
+                        break;
+                    case "double":
+                    case "System.Double":
+                        sb.AppendLine($"                writer.Write(this.{propertyName});");
+                        break;
+                    case "float":
+                    case "System.Single":
+                        sb.AppendLine($"                writer.Write(this.{propertyName});");
+                        break;
+                    case "byte":
+                    case "System.Byte":
+                        sb.AppendLine($"                writer.Write(this.{propertyName});");
+                        break;
+                    case "short":
+                    case "System.Int16":
+                        sb.AppendLine($"                writer.Write(this.{propertyName});");
+                        break;
+                    case "decimal":
+                    case "System.Decimal":
+                        sb.AppendLine($"                writer.Write(this.{propertyName});");
+                        break;
                 }
             }
 
