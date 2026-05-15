@@ -95,12 +95,18 @@ namespace TestServices
                 {
                     int keyIndex = random.Next(numKeys);
                     string key = $"key{keyIndex}";
-                    byte[] value = BitConverter.GetBytes(keyIndex * 100 + random.Next(100));
+                    // Create a UserProfile instead of byte[]
+                    var profile = new SimpleStore.UserProfile
+                    {
+                        Id = keyIndex * 100 + random.Next(100),
+                        Username = $"user{keyIndex}",
+                        CreatedAt = DateTime.Now
+                    };
 
                     // Randomly choose between Set and Get
                     if (random.Next(2) == 0)
                     {
-                        store.Set(key, value);
+                        store.Set(key, profile);
                     }
                     else
                     {
@@ -127,16 +133,24 @@ namespace TestServices
             // Perform concurrent Sets and Gets on same key
             using var store2 = new SimpleStore.SimpleStore();
             const string testKey = "concurrentKey";
-            byte[] testValue = new byte[] { 1, 2, 3 };
+            var testProfile = new SimpleStore.UserProfile
+            {
+                Id = 123,
+                Username = "testuser",
+                CreatedAt = DateTime.UtcNow
+            };
 
-            var setTask = Task.Run(() => store2.Set(testKey, testValue));
+            var setTask = Task.Run(() => store2.Set(testKey, testProfile));
             var getTask = Task.Run(() => store2.Get(testKey));
 
             await Task.WhenAll(setTask, getTask);
 
             var retrieved = store2.Get(testKey);
             Assert.NotNull(retrieved);
-            Assert.Equal(testValue, retrieved);
+            // Compare UserProfile properties instead of byte arrays
+            Assert.Equal(testProfile.Id, retrieved.Id);
+            Assert.Equal(testProfile.Username, retrieved.Username);
+            Assert.Equal(testProfile.CreatedAt, retrieved.CreatedAt);
         }
     }
 }
