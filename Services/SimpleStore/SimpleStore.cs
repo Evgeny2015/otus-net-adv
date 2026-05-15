@@ -39,7 +39,10 @@
                 {
                     return null;
                 }
-                return System.Text.Json.JsonSerializer.Deserialize<UserProfile>(value);
+                using (var memoryStream = new System.IO.MemoryStream(value))
+                {
+                    return UserProfile.DeserializeFromBinary(memoryStream);
+                }
             }
             finally
             {

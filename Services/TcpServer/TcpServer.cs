@@ -1,8 +1,11 @@
 using System;
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using SimpleStore;
 
@@ -10,19 +13,30 @@ namespace TcpServer
 {
     public class TcpServer
     {
+        // Static ActivitySource and Meter for OpenTelemetry instrumentation
+        private static readonly ActivitySource ActivitySource = new("TcpServer");
+        private static readonly Meter Meter = new("TcpServer");
+
+        // Metrics instruments
+        private static readonly Counter<long> ProcessedCommandsCounter = Meter.CreateCounter<long>("tcp.server.commands.processed", description: "Number of commands processed");
+        private static readonly Histogram<double> CommandDurationHistogram = Meter.CreateHistogram<double>("tcp.server.command.duration", unit: "ms", description: "Duration of command processing in milliseconds");
+
         private readonly IPAddress _ipAddress;
         private readonly int _port;
         private readonly SimpleStore.SimpleStore _store;
+        private readonly SemaphoreSlim _connectionSemaphore;
         private Socket? _serverSocket;
 
-        public TcpServer(IPAddress ipAddress, int port, SimpleStore.SimpleStore store)
+        public TcpServer(IPAddress ipAddress, int port, SimpleStore.SimpleStore store, int maxConcurrentConnections = 10)
         {
             _ipAddress = ipAddress;
             _port = port;
             _store = store ?? throw new ArgumentNullException(nameof(store));
+            _connectionSemaphore = new SemaphoreSlim(maxConcurrentConnections, maxConcurrentConnections);
         }
 
-        public TcpServer(string ipAddress, int port, SimpleStore.SimpleStore store) : this(IPAddress.Parse(ipAddress), port, store)
+        public TcpServer(string ipAddress, int port, SimpleStore.SimpleStore store, int maxConcurrentConnections = 10)
+            : this(IPAddress.Parse(ipAddress), port, store, maxConcurrentConnections)
         {
         }
 
@@ -37,15 +51,18 @@ namespace TcpServer
             // Start listening
             _serverSocket.Listen(backlog: 10);
 
-            Console.WriteLine($"TCP Server started on {_ipAddress}:{_port}");
+            Console.WriteLine($"TCP Server started on {_ipAddress}:{_port} (max concurrent connections: {_connectionSemaphore.CurrentCount})");
 
             // Infinite loop to accept connections
             while (true)
             {
                 try
                 {
+                    // Wait for semaphore before accepting new connection
+                    await _connectionSemaphore.WaitAsync();
+
                     var clientSocket = await _serverSocket.AcceptAsync();
-                    Console.WriteLine($"Client connected from {clientSocket.RemoteEndPoint}");
+                    Console.WriteLine($"Client connected from {clientSocket.RemoteEndPoint} (active connections: {_connectionSemaphore.CurrentCount})");
 
                     // Start processing client in separate task
                     _ = ProcessClientAsync(clientSocket);
@@ -53,6 +70,8 @@ namespace TcpServer
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Error accepting connection: {ex.Message}");
+                    // If we failed after waiting, release the semaphore
+                    _connectionSemaphore.Release();
                 }
             }
         }
@@ -60,6 +79,8 @@ namespace TcpServer
         private async Task ProcessClientAsync(Socket clientSocket)
         {
             const int bufferSize = 1024;
+            const int maxMessageSize = 4096; // 4KB limit for memory exhaustion protection
+            int totalReceivedBytes = 0;
 
             try
             {
@@ -81,6 +102,17 @@ namespace TcpServer
                             break;
                         }
 
+                        // Check for memory exhaustion: if total received bytes exceed limit
+                        totalReceivedBytes += receiveResult;
+                        if (totalReceivedBytes > maxMessageSize)
+                        {
+                            Console.WriteLine($"Client {clientSocket.RemoteEndPoint} exceeded message size limit ({totalReceivedBytes} > {maxMessageSize} bytes). Disconnecting.");
+                            // Send error message before disconnecting
+                            var errorResponse = Encoding.UTF8.GetBytes("-ERR Message too large (max 4KB)\r\n");
+                            await clientSocket.SendAsync(new Memory<byte>(errorResponse), SocketFlags.None);
+                            break;
+                        }
+
                         // Convert received bytes to string and parse command
                         var receivedData = new ReadOnlySpan<byte>(buffer, 0, receiveResult);
                         var text = System.Text.Encoding.UTF8.GetString(receivedData);
@@ -99,17 +131,26 @@ namespace TcpServer
                         string key = parsedCommand.Key.ToString();
                         string valueStr = parsedCommand.Value.ToString();
 
-                        // Process command based on type
-                        if (string.IsNullOrEmpty(command))
+                        // Create Activity for tracing
+                        using var activity = ActivitySource.StartActivity("ProcessCommand");
+                        activity?.SetTag("command.name", command);
+                        activity?.SetTag("command.key", key);
+
+                        // Metrics: start stopwatch and prepare to record
+                        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+                        try
                         {
-                            // Empty command - send error
-                            var errorResponse = Encoding.UTF8.GetBytes("-ERR Empty command\r\n");
-                            await clientSocket.SendAsync(new Memory<byte>(errorResponse), SocketFlags.None);
-                        }
-                        else
-                        {
-                            switch (command.ToUpperInvariant())
+                            // Process command based on type
+                            if (string.IsNullOrEmpty(command))
                             {
+                                // Empty command - send error
+                                var errorResponse = Encoding.UTF8.GetBytes("-ERR Empty command\r\n");
+                                await clientSocket.SendAsync(new Memory<byte>(errorResponse), SocketFlags.None);
+                            }
+                            else
+                            {
+                                switch (command.ToUpperInvariant())
+                                {
                                 case "SET":
                                     if (string.IsNullOrEmpty(key) || string.IsNullOrEmpty(valueStr))
                                     {
@@ -184,6 +225,14 @@ namespace TcpServer
                                     break;
                             }
                         }
+                        }
+                        finally
+                        {
+                            // Record metrics
+                            stopwatch.Stop();
+                            ProcessedCommandsCounter.Add(1, new KeyValuePair<string, object?>("command", command));
+                            CommandDurationHistogram.Record(stopwatch.ElapsedMilliseconds, new KeyValuePair<string, object?>("command", command));
+                        }
                     }
                     finally
                     {
@@ -202,6 +251,10 @@ namespace TcpServer
             }
             finally
             {
+                // Release the connection semaphore
+                _connectionSemaphore.Release();
+                Console.WriteLine($"Client {clientSocket.RemoteEndPoint} disconnected (active connections: {_connectionSemaphore.CurrentCount})");
+
                 // Close client socket
                 try
                 {
