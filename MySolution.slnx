@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Benchmarks/">
+    <Project Path="Benchmarks/BinarySerializerBenchmarks.csproj" />
+  </Folder>
   <Folder Name="/Services/">
     <Project Path="Services/CommandParser/CommandParser.csproj" />
     <Project Path="Services/SimpleStore/SimpleStore.csproj" />
@@ -6,5 +9,8 @@
     <Project Path="Services/TcpServer/TcpServer.csproj" />
   </Folder>
   <Project Path="ServerApp/ServerApp.csproj" />
+  <Folder Name="/SourceGenerator/">
+    <Project Path="SourceGenerator/BinarySerializerGenerator.csproj" />
+  </Folder>
   <Project Path="LoadTest/LoadTest.csproj" />
 </Solution>
